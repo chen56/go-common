@@ -7,10 +7,6 @@ import (
 	"testing"
 )
 
-func Skip(t *testing.T) {
-	t.Skip(fmt.Sprintf("skip: %s",traceFuncName(3)))
-}
-
 func CurrentFuncName()string {
 	return traceFuncName(3)
 }

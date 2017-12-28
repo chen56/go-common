@@ -6,7 +6,11 @@ import (
 	"os/signal"
 	"github.com/apex/log"
 	"github.com/Shopify/sarama"
+	"reflect"
 )
+
+type empty struct{}
+var ll *log.Entry = log.WithField("pkg", reflect.TypeOf(empty{}).PkgPath())
 
 type Callback func(msgs []*sarama.ConsumerMessage) error;
 
@@ -17,6 +21,7 @@ type BatchConsumer struct {
 	addrs    []string
 	groupID  string
 	topics   []string
+	ll *log.Entry
 }
 type BatchConfig struct {
 	cluster.Config
@@ -40,10 +45,29 @@ func NewBatchConsumer(addrs []string, groupID string, topics []string, config *B
 		panic("BatchLimit should >0")
 	}
 
+	var ll = ll.WithField("addrs", addrs).
+		WithField("groupID", groupID).
+		WithField("topics", topics)
+
 	consumer, err := cluster.NewConsumer(addrs, groupID, topics, &config.Config)
 	if err != nil {
 		return nil, err
 	}
+
+	//原先consumer.Errors和consumer.Notifications放在Run(),但发现不能保证delay_read
+	// consume errors
+	go func() {
+		for err := range consumer.Errors() {
+			ll.Errorf("TickError: %s\n", err.Error())
+		}
+	}()
+	// consume notifications
+	go func() {
+		for ntf := range consumer.Notifications() {
+			ll.Infof("Rebalanced: %+v\n", ntf)
+		}
+	}()
+
 	return &BatchConsumer{
 		consumer: consumer,
 		config:   config,
@@ -51,70 +75,54 @@ func NewBatchConsumer(addrs []string, groupID string, topics []string, config *B
 		addrs:    addrs,
 		groupID:  groupID,
 		topics:   topics,
-	}, nil
+		ll:ll,
+	},nil
 }
 
 func (this *BatchConsumer) Close() error {
 	return this.consumer.Close()
 }
 
-func (this *BatchConsumer) Run() {
+func (x *BatchConsumer) Run() {
 	// trap SIGINT to trigger a shutdown.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	var log = log.WithField("addrs", this.addrs).
-		WithField("class", "BatchConsumer").
-		WithField("groupID", this.groupID).
-		WithField("topics", this.topics)
-
-	log.Info("Run")
-	// consume errors
-	go func() {
-		for err := range this.consumer.Errors() {
-			log.Errorf("TickError: %s\n", err.Error())
-		}
-	}()
-
-	// consume notifications
-	go func() {
-		for ntf := range this.consumer.Notifications() {
-			log.Infof("Rebalanced: %+v\n", ntf)
-		}
-	}()
 
 	var msgs []*sarama.ConsumerMessage
 	var i int
 	for {
 		select {
-		case msg, ok := <-this.consumer.Messages():
+		case msg, ok := <-x.consumer.Messages():
 			if !ok {
 				continue
 			}
-			log.Infof("received: %s", string(msg.Value))
+		        if x.ll.Level==log.DebugLevel{
+				x.ll.Debugf("received: %s", string(msg.Value))
+			}
 
 			msgs = append(msgs, msg)
 
 			i++
-			if i%this.config.BatchLimit != 0 {
+			if i% x.config.BatchLimit != 0 {
 				continue
 			}
 
-			err := this.callback(msgs)
+			err := x.callback(msgs)
 			if err != nil {
-				log.Errorf("batch consumer error: %+v", err)
+				x.ll.Errorf("batch consumer error: %+v", err)
 				return
 			}
 
 			msgs = []*sarama.ConsumerMessage{}
-			if this.config.MarkOffset {
-				this.consumer.MarkOffset(msg, "") // mark message as processed
+			if x.config.MarkOffset {
+				x.consumer.MarkOffset(msg, "") // mark message as processed
 			}
 		case s, ok := <-signals:
 			if ok {
-				log.Infof("os.Signal: %+v", s)
+				x.ll.Infof("os.Signal: %+v", s)
 			} else {
-				log.Info("os.Signal: what s happen?")
+				x.ll.Info("os.Signal: what s happen?")
 			}
 			return
 		}
