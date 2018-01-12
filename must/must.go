@@ -9,6 +9,12 @@ func True(b bool) {
 		panic(fmt.Sprintf("expected true"))
 	}
 }
+func Truef(b bool, msg string, args ...interface{}) {
+	if !b {
+		panic(fmt.Sprintf(msg, args...))
+	}
+}
+
 
 func False(b bool) {
 	if b {
