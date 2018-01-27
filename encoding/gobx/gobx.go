@@ -1,8 +1,8 @@
-package lib
+package gobx
 
 import (
-	"encoding/gob"
 	"bytes"
+	"encoding/gob"
 )
 
 func Encode(x interface{}) ([]byte, error) {
