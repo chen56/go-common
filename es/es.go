@@ -1,12 +1,15 @@
 package es
 
 import (
+	"encoding/json"
 	"fmt"
+
 	"github.com/apex/log"
 	"gopkg.in/olivere/elastic.v5"
-	"encoding/json"
 )
 
+//Deprecated
+//废弃，应该在自己的项目中创建
 func NewESClient(url string) (client *elastic.Client, err error) {
 	return elastic.NewClient(
 		elastic.SetURL(url),
