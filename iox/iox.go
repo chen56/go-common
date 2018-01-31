@@ -3,6 +3,7 @@ package iox
 import (
 	"bufio"
 	"bytes"
+	"io"
 	"os"
 )
 
@@ -28,4 +29,10 @@ func ReadFromPipe() string {
 		buf.WriteString(scanner.Text())
 	}
 	return buf.String()
+}
+
+func SafeClose(c io.Closer, err *error) {
+	if cerr := c.Close(); cerr != nil && *err == nil {
+		*err = cerr
+	}
 }

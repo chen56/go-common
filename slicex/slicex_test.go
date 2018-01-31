@@ -6,12 +6,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var slice1_5 = []int{1, 2, 3, 4, 5}
+
 //go test -timeout 30s  -run TestInterfaceToSlice
 func TestSplitInt(t *testing.T) {
 	assert := assert.New(t)
+	assert.Equal([][]int{[]int{1, 2}, []int{3, 4}, []int{5}}, SplitInt(slice1_5, 2))
+	assert.Equal([][]int{[]int{1, 2, 3}, []int{4, 5}}, SplitInt(slice1_5, 3))
+}
 
-	assert.Equal([][]int{[]int{1, 2}, []int{3, 4}, []int{5}}, SplitInt([]int{1, 2, 3, 4, 5}, 2))
-	assert.Equal([][]int{[]int{1, 2, 3}, []int{4, 5}}, SplitInt([]int{1, 2, 3, 4, 5}, 3))
+//看看如何使用分页结果
+func TestSplitInt_for(t *testing.T) {
+	assert := assert.New(t)
+
+	var x []int
+	for _, page := range SplitInt(slice1_5, 5000) {
+		x = append(x, page...)
+	}
+	assert.Equal(slice1_5, x)
 }
 
 func TestSplitIntError(t *testing.T) {
@@ -23,5 +35,5 @@ func TestSplitIntError(t *testing.T) {
 			assert.Fail("should panic , but not")
 		}
 	}()
-	SplitInt([]int{1, 2, 3, 4, 5}, 0)
+	SplitInt(slice1_5, 0)
 }
