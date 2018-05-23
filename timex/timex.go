@@ -13,6 +13,11 @@ func MustParse(layout, value string) time.Time {
 	assert.NoErr(err)
 	return t
 }
+func MustParseInLocation(layout, value string,loc *time.Location) time.Time {
+	t, err := time.ParseInLocation(layout, value,loc)
+	assert.NoErr(err)
+	return t
+}
 func MustLoadLocation(name string) *time.Location {
 	t, err := time.LoadLocation(name)
 	assert.NoErr(err)
