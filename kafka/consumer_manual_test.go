@@ -22,7 +22,7 @@ func TestManual_NewBatchConsumer(t *testing.T) {
 	config.MarkOffset = false
 	config.BatchLimit=100
 	config.BatchFetchTimeout=1*time.Second
-	consumer, err := NewBatchConsumer([]string{"192.168.1.11:9092"}, "chenpeng2", []string{"appshare-db"}, config, func(msgs []*sarama.ConsumerMessage) error {
+	consumer, err := NewBatchConsumer([]string{"192.168.1.11:9092"}, "chenpeng2", []string{"x"}, config, func(msgs []*sarama.ConsumerMessage) error {
 		log.Infof("len: %+v", len(msgs))
 		for _, msgRaw := range msgs {
 			//msgUnmarshal:=config.Match(string(msgRaw.Value))
