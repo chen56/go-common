@@ -7,9 +7,11 @@ import (
 	"github.com/apex/log"
 	"github.com/Shopify/sarama"
 	"reflect"
+	"time"
 )
 
 type empty struct{}
+
 var ll *log.Entry = log.WithField("pkg", reflect.TypeOf(empty{}).PkgPath())
 
 type Callback func(msgs []*sarama.ConsumerMessage) error;
@@ -21,12 +23,15 @@ type BatchConsumer struct {
 	addrs    []string
 	groupID  string
 	topics   []string
-	ll *log.Entry
+	ll       *log.Entry
 }
 type BatchConfig struct {
 	cluster.Config
-	BatchLimit int
 	MarkOffset bool
+	//等待下批数据到达BatchLimit上限后再返回这批数据
+	BatchLimit int
+	//等待下批数据到达BatchLimit上限前，如果超时，也返回
+	BatchFetchTimeout time.Duration
 }
 
 func NewConfig() *BatchConfig {
@@ -34,6 +39,7 @@ func NewConfig() *BatchConfig {
 		Config: *cluster.NewConfig(),
 	}
 	c.BatchLimit = 1
+
 	return c
 }
 
@@ -76,20 +82,20 @@ func NewBatchConsumer(addrs []string, groupID string, topics []string, config *B
 		groupID:  groupID,
 		topics:   topics,
 		ll:ll,
-	},nil
+	}, nil
 }
 
 func (this *BatchConsumer) Close() error {
 	return this.consumer.Close()
 }
 
-func (x *BatchConsumer) Run() {
+func (x *BatchConsumer) Run()error {
 	// trap SIGINT to trigger a shutdown.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
+	var bufferMessages []*sarama.ConsumerMessage
 
-	var msgs []*sarama.ConsumerMessage
 	var i int
 	for {
 		select {
@@ -97,26 +103,20 @@ func (x *BatchConsumer) Run() {
 			if !ok {
 				continue
 			}
-		        if x.ll.Level==log.DebugLevel{
+			if x.ll.Level == log.DebugLevel {
 				x.ll.Debugf("received: %s", string(msg.Value))
 			}
 
-			msgs = append(msgs, msg)
+			bufferMessages = append(bufferMessages, msg)
 
 			i++
-			if i% x.config.BatchLimit != 0 {
+			if i % x.config.BatchLimit != 0 {
 				continue
 			}
 
-			err := x.callback(msgs)
+			err:=x.process(&bufferMessages)
 			if err != nil {
-				x.ll.Errorf("batch consumer error: %+v", err)
-				return
-			}
-
-			msgs = []*sarama.ConsumerMessage{}
-			if x.config.MarkOffset {
-				x.consumer.MarkOffset(msg, "") // mark message as processed
+				return err
 			}
 		case s, ok := <-signals:
 			if ok {
@@ -124,7 +124,27 @@ func (x *BatchConsumer) Run() {
 			} else {
 				x.ll.Info("os.Signal: what s happen?")
 			}
-			return
+			return nil
+		case <-time.After(3 * time.Second):
+			err:=x.process(&bufferMessages)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+}
+
+func (x *BatchConsumer)  process(bufferMessages *[]*sarama.ConsumerMessage)error{
+	err := x.callback(*bufferMessages)
+	if err != nil {
+		return err
+	}
+	*bufferMessages = []*sarama.ConsumerMessage{}
+	if x.config.MarkOffset {
+		for _,msg:=range *bufferMessages {
+			x.consumer.MarkOffset(msg, "") // mark message as processed
 		}
 	}
+	return nil
 }
