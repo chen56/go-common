@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"time"
 )
 
 func TestBatch(t *testing.T) {
-	assert := assert.New(t)
+	assert := require.New(t)
 
 	var batch = NewBuilder().Limit(2).Callback(func(items []interface{}, b *Batch) {}).Build()
 	batch.TickOk("a")
@@ -26,7 +26,7 @@ func TestBatch(t *testing.T) {
 }
 
 func TestIsReachLimit(t *testing.T) {
-	assert := assert.New(t)
+	assert := require.New(t)
 	var history string
 	var batch = NewBuilder().Limit(2).Callback(func(items []interface{}, b *Batch) {
 		history = history + fmt.Sprintf("%v,", b.items)
@@ -48,7 +48,7 @@ func TestIsReachLimit(t *testing.T) {
 }
 
 func TestEmpty(t *testing.T) {
-	assert := assert.New(t)
+	assert := require.New(t)
 	var last time.Time
 	assert.NotNil(last)
 	var batch = NewBuilder().Limit(2).Callback(func(items []interface{}, b *Batch) {}).Build()
@@ -58,7 +58,7 @@ func TestEmpty(t *testing.T) {
 
 }
 func TestItems(t *testing.T) {
-	assert := assert.New(t)
+	assert := require.New(t)
 	var history string
 	var batch = NewBuilder().Limit(2).Callback(func(items []interface{}, b *Batch) {
 		history = history + fmt.Sprintf("%v,", b.items)
@@ -75,13 +75,13 @@ func TestItems(t *testing.T) {
 }
 
 func TestLimitTime(t *testing.T) {
-	assert := assert.New(t)
+	assert := require.New(t)
 	var history string
 	var batch = NewBuilder().Limit(10).
 		LimitDuration(10 * time.Millisecond).
 		Callback(func(items []interface{}, b *Batch) {
-		history = history + fmt.Sprintf("%v,", b.items)
-	}).Build()
+			history = history + fmt.Sprintf("%v,", b.items)
+		}).Build()
 
 	batch.TickOk("a")
 	time.Sleep(11 * time.Millisecond)

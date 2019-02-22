@@ -1,17 +1,17 @@
 package main
 
 import (
-	"fmt"
-	"time"
-	"github.com/chen56/go-common/must"
 	"bufio"
+	"fmt"
+	"github.com/chen56/go-common/must"
 	"os"
+	"time"
 
-	"github.com/chen56/go-common/kafka"
 	"github.com/Shopify/sarama"
+	"github.com/chen56/go-common/kafka"
 )
-type empty struct{}
 
+type empty struct{}
 
 func main() {
 	config := kafka.NewConfig()
@@ -30,7 +30,7 @@ func main() {
 		return nil
 	})
 	defer consumer.Close()
-	must.NoErr(err)
+	must.NoError(err)
 
 	//暂停等待输入
 	fmt.Printf("waiting...")

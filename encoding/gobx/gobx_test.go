@@ -2,9 +2,8 @@ package gobx
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type User struct {
@@ -13,7 +12,7 @@ type User struct {
 }
 
 func TestEncode(t *testing.T) {
-	a := assert.New(t)
+	a := require.New(t)
 	user := User{Name: "chen", Age: 2}
 	data, err := Encode(user)
 	a.NoError(err)

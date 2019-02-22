@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLocation(t *testing.T) {
-	a := assert.New(t)
+	a := require.New(t)
 
 	x := time.Date(1980, 1, 1, 0, 0, 0, 0, Shanghai)
 
@@ -25,7 +25,7 @@ func TestB(t *testing.T) {
 
 }
 func TestA(t *testing.T) {
-	a := assert.New(t)
+	a := require.New(t)
 	type testData struct {
 		start, end string
 		expected   string

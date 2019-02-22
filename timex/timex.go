@@ -3,29 +3,29 @@ package timex
 import (
 	"time"
 
-	"github.com/chen56/go-common/assert"
+	"github.com/chen56/go-common/must"
 )
 
 var Shanghai = MustLoadLocation("Asia/Shanghai")
 
 func MustParse(layout, value string) time.Time {
 	t, err := time.Parse(layout, value)
-	assert.NoErr(err)
+	must.NoError(err)
 	return t
 }
-func MustParseInLocation(layout, value string,loc *time.Location) time.Time {
-	t, err := time.ParseInLocation(layout, value,loc)
-	assert.NoErr(err)
+func MustParseInLocation(layout, value string, loc *time.Location) time.Time {
+	t, err := time.ParseInLocation(layout, value, loc)
+	must.NoError(err)
 	return t
 }
 func MustParseDuration(s string) time.Duration {
 	t, err := time.ParseDuration(s)
-	assert.NoErr(err)
+	must.NoError(err)
 	return t
 }
 func MustLoadLocation(name string) *time.Location {
 	t, err := time.LoadLocation(name)
-	assert.NoErr(err)
+	must.NoError(err)
 	return t
 }
 

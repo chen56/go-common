@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //go test -timeout 30s  -run TestInterfaceToSlice
 func TestInterfaceToSlice(t *testing.T) {
-	assert := assert.New(t)
+	assert := require.New(t)
 
 	data := []struct {
 		strSlice []string

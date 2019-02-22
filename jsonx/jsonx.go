@@ -1,19 +1,19 @@
 package jsonx
 
 import (
-	_ "github.com/go-sql-driver/mysql"
 	"encoding/json"
-	"github.com/chen56/go-common/assert"
+	"github.com/chen56/go-common/must"
+	_ "github.com/go-sql-driver/mysql"
 )
 
-func MustMarshal2String(v interface{})string{
-	b,err:=json.Marshal(v)
-	assert.NoErr(err)
-	return  string(b)
+func MustMarshal2String(v interface{}) string {
+	b, err := json.Marshal(v)
+	must.NoError(err)
+	return string(b)
 }
 
-func MustMarshal(v interface{})[]byte{
-	b,err:=json.Marshal(v)
-	assert.NoErr(err)
+func MustMarshal(v interface{}) []byte {
+	b, err := json.Marshal(v)
+	must.NoError(err)
 	return b
 }

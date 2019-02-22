@@ -1,15 +1,16 @@
 package kafka
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
-	"github.com/chen56/go-common/assert"
 	"github.com/Shopify/sarama"
 	"github.com/apex/log"
 )
 
 func TestManual_NewBatchConsumer(t *testing.T) {
+	t.Skip()
 	config := NewConfig()
 	config.Consumer.Offsets.Retention = 5 * time.Minute
 	config.Consumer.Offsets.Initial = sarama.OffsetNewest
@@ -20,8 +21,8 @@ func TestManual_NewBatchConsumer(t *testing.T) {
 
 	config.Group.Return.Notifications = true
 	config.MarkOffset = false
-	config.BatchLimit=100
-	config.BatchFetchTimeout=1*time.Second
+	config.BatchLimit = 100
+	config.BatchFetchTimeout = 1 * time.Second
 	consumer, err := NewBatchConsumer([]string{"192.168.1.11:9092"}, "chenpeng2", []string{"x"}, config, func(msgs []*sarama.ConsumerMessage) error {
 		log.Infof("len: %+v", len(msgs))
 		for _, msgRaw := range msgs {
@@ -31,6 +32,6 @@ func TestManual_NewBatchConsumer(t *testing.T) {
 		return nil
 	})
 	defer consumer.Close()
-	assert.NoErr(err)
+	require.NoError(t, err)
 	consumer.Run()
 }

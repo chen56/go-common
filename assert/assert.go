@@ -3,6 +3,7 @@ package assert
 
 import (
 	"fmt"
+	"github.com/chen56/go-common/must"
 )
 
 func True(b bool) {
@@ -32,10 +33,7 @@ func Failf(msg string, args ...interface{}) {
 }
 
 func NoErr(err error) {
-	if err != nil {
-		// Handle error
-		panic(err)
-	}
+	must.NoError(err)
 }
 
 func NotNil(x interface{}) {

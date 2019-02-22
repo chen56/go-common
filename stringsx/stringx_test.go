@@ -1,12 +1,12 @@
 package stringsx
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCut(t *testing.T) {
-	assert := assert.New(t)
+	assert := require.New(t)
 
 	data := []struct {
 		str    string

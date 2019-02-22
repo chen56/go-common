@@ -8,6 +8,6 @@ import (
 
 func MustReadFileToString(file string) string {
 	content, err := ioutil.ReadFile(file)
-	must.NoErr(err)
+	must.NoError(err)
 	return string(content)
 }
