@@ -1,0 +1,151 @@
+package thriftx
+
+import (
+	"context"
+	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/hopehook/pool"
+	"net"
+	"time"
+	"fmt"
+)
+
+var (
+	maxBadConnRetries int
+)
+
+// connReuseStrategy determines how returns connections.
+type connReuseStrategy uint8
+
+const (
+	// alwaysNewConn forces a new connection.
+	alwaysNewConn connReuseStrategy = iota
+	// cachedOrNewConn returns a cached connection, if available, else waits
+	// for one to become available or
+	// creates a new connection.
+	cachedOrNewConn
+)
+
+type PoolClientConf struct {
+	HostPort string `yaml:"hostPort" json:"hostPort"`
+	InitCap  int    `yaml:"initCap"  json:"initCap"`
+	MaxCap   int    `yaml:"maxCap"   json:"maxCap"`
+	Timeout  int    `yaml:"timeout"  json:"timeout"`
+}
+
+type poolClient struct {
+	*thrift.TStandardClient
+	seqId                      int32
+	timeout                    time.Duration
+	iprotFactory, oprotFactory thrift.TProtocolFactory
+	pool                       pool.Pool
+	conf                       PoolClientConf
+}
+
+func (x PoolClientConf) NewPoolClient() (client thrift.TClient) {
+	factoryFunc := func() (interface{}, error) {
+		conn, err := net.Dial("tcp", x.HostPort)
+		if err != nil {
+			return nil, err
+		}
+		return conn, err
+	}
+
+	closeFunc := func(v interface{}) error { return v.(net.Conn).Close() }
+
+	//创建一个连接池
+	poolConfig := &pool.PoolConfig{
+		InitialCap: x.InitCap,
+		MaxCap:     x.MaxCap,
+		Factory:    factoryFunc,
+		Close:      closeFunc,
+	}
+
+	p, err := pool.NewChannelPool(poolConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
+	return &poolClient{
+		timeout:      time.Duration(x.Timeout) * time.Millisecond,
+		iprotFactory: protocolFactory,
+		oprotFactory: protocolFactory,
+		pool:         p,
+		conf:         x,
+	}
+}
+
+func (p *poolClient) Call(ctx context.Context, method string, args, result thrift.TStruct) error {
+	var err error
+	var errT thrift.TTransportException
+	var errTmp int
+	var ok bool
+	// set maxBadConnRetries equals p.pool.Len(), attempt to retry by all connections
+	// if maxBadConnRetries <= 0, set to 2
+	maxBadConnRetries = p.pool.Len()
+	if maxBadConnRetries <= 0 {
+		maxBadConnRetries = 2
+	}
+
+	// try maxBadConnRetries times by cachedOrNewConn connReuseStrategy
+	for i := 0; i < maxBadConnRetries; i++ {
+		err = p.call(ctx, method, args, result, cachedOrNewConn)
+		if errT, ok = err.(thrift.TTransportException); ok {
+			errTmp = errT.TypeId()
+			if errTmp != thrift.END_OF_FILE && errTmp != thrift.NOT_OPEN {
+				break
+			}
+		}
+	}
+
+	// if try maxBadConnRetries times failed, create new connection by alwaysNewConn connReuseStrategy
+	if errTmp == thrift.END_OF_FILE || errTmp == thrift.NOT_OPEN {
+		return p.call(ctx, method, args, result, alwaysNewConn)
+	}
+
+	return err
+}
+
+func (p *poolClient) call(ctx context.Context, method string, args, result thrift.TStruct, strategy connReuseStrategy) error {
+	p.seqId++
+	seqId := p.seqId
+
+	// get conn from pool
+	var connVar interface{}
+	var err error
+	if strategy == cachedOrNewConn {
+		connVar, err = p.pool.Get()
+	} else {
+		connVar, err = p.pool.Connect()
+	}
+	if err != nil {
+		return err
+	}
+	conn := connVar.(net.Conn)
+
+	// wrap conn as thrift fd
+	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
+	trans := thrift.NewTSocketFromConnTimeout(conn, p.timeout)
+	transport, err := transportFactory.GetTransport(trans)
+	if err != nil {
+		return err
+	}
+	inputProtocol := p.iprotFactory.GetProtocol(transport)
+	outputProtocol := p.oprotFactory.GetProtocol(transport)
+
+	if err := p.Send(ctx, outputProtocol, seqId, method, args); err != nil {
+		return err
+	}
+
+	// method is oneway
+	if result == nil {
+		return nil
+	}
+
+	if err = p.Recv(inputProtocol, seqId, method, result); err != nil {
+		return err
+	}
+
+	// put conn back to the pool, do not close the connection.
+	return p.pool.Put(connVar)
+}

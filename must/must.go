@@ -1,50 +1,48 @@
 package must
 
 import (
-	"fmt"
+	"github.com/chen56/go-common/reflectx"
+	"github.com/pkg/errors"
 )
 
-func True(b bool) {
-	if !b {
-		panic(fmt.Sprintf("expected true"))
-	}
-}
-func Truef(b bool, msg string, args ...interface{}) {
-	if !b {
-		panic(fmt.Sprintf(msg, args...))
-	}
-}
-
-func False(b bool) {
-	if b {
-		panic(fmt.Sprintf("expected false"))
-	}
-}
-
-func Falsef(b bool, msg string, args ...interface{}) {
-	if b {
-		panic(fmt.Sprintf(msg, args...))
-	}
-
-}
-
-func Fail(msg string) {
-	panic(msg)
-}
-
-func Failf(msg string, args ...interface{}) {
-	panic(fmt.Sprintf(msg, args...))
-}
-
-func NoError(err error) {
+func NoError(err error, msgAndArgs ...interface{}) {
 	if err != nil {
-		// Handle error
-		panic(err)
+		panic(errors.Wrapf(err, messageFromMsgAndArgs("must NoError", msgAndArgs...)))
 	}
 }
 
-func NotNil(x interface{}) {
-	if x == nil {
-		panic(x)
+func NotEmpty(object interface{}, msgAndArgs ...interface{}) {
+	if reflectx.IsZero(object) {
+		panic(messageFromMsgAndArgs("must NotEmpty", msgAndArgs...))
+	}
+}
+func NotNil(object interface{}, msgAndArgs ...interface{}) {
+	if isNil(object) {
+		panic(messageFromMsgAndArgs("must NotNil", msgAndArgs...))
+	}
+}
+func Nil(object interface{}, msgAndArgs ...interface{}) {
+	if !isNil(nil) {
+		panic(messageFromMsgAndArgs("must Nil", msgAndArgs...))
+	}
+}
+func True(b bool, msgAndArgs ...interface{}) {
+	if !b {
+		panic(messageFromMsgAndArgs("must true", msgAndArgs...))
+	}
+}
+func False(b bool, msgAndArgs ...interface{}) {
+	if b {
+		panic(messageFromMsgAndArgs("must false", msgAndArgs...))
+	}
+}
+func Equal(expected interface{}, actual interface{}, msgAndArgs ...interface{}) {
+	if !objectsAreEqual(expected, actual) {
+		panic(messageFromMsgAndArgs("must equals", msgAndArgs...))
+	}
+}
+func NotEqual(expected interface{}, actual interface{}, msgAndArgs ...interface{}) {
+	if objectsAreEqual(expected, actual) {
+		panic(messageFromMsgAndArgs("must NotEquals", msgAndArgs...))
 	}
 }

@@ -1,3 +1,3 @@
-# Deprecated: 废弃
+# go-common
 
-package: assert 
+go服务端项目基础代码包，本项目已在实际的项目中使用。

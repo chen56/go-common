@@ -1,12 +1,12 @@
 package timex
 
 import (
-	"time"
-
 	"github.com/chen56/go-common/must"
+	"time"
 )
 
-var Shanghai = MustLoadLocation("Asia/Shanghai")
+var LocationAsiaShanghai = MustLoadLocation("Asia/Shanghai")
+var Zero = time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
 
 func MustParse(layout, value string) time.Time {
 	t, err := time.Parse(layout, value)
@@ -33,59 +33,53 @@ func BeginOfDay(now time.Time) time.Time {
 	result := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	return result
 }
-func BeginningOfMonth(now time.Time) time.Time {
+
+// 获取周一
+func BeginOfWeek(now time.Time) time.Time {
+	NumOfWeek := NumOfWeek(now)
+	res := now.AddDate(0, 0, 1-NumOfWeek)
+	result := time.Date(res.Year(), res.Month(), res.Day(), 0, 0, 0, 0, now.Location())
+	return result
+}
+func BeginOfMonth(now time.Time) time.Time {
 	result := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	return result
 }
 
-type TimeDiff struct {
-	year, month, day, hour, min, sec int
+// 获取周中数字
+func NumOfWeek(now time.Time) int {
+	Num := 0
+	switch now.Weekday().String() {
+	case "Monday":
+		Num = 1
+	case "Tuesday":
+		Num = 2
+	case "Wednesday":
+		Num = 3
+	case "Thursday":
+		Num = 4
+	case "Friday":
+		Num = 5
+	case "Saturday":
+		Num = 6
+	case "Sunday":
+		Num = 7
+	}
+	return Num
 }
 
-func Diff(a, b time.Time) time.Time {
-	if a.Location() != b.Location() {
-		b = b.In(a.Location())
-	}
-	if a.After(b) {
-		a, b = b, a
-	}
-	y1, M1, d1 := a.Date()
-	y2, M2, d2 := b.Date()
+//计算两个日期是否相等
+func IsSameDate(t1, t2 time.Time) bool {
+	y1, m1, d1 := t1.Date()
+	y2, m2, d2 := t2.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
+}
 
-	h1, m1, s1 := a.Clock()
-	h2, m2, s2 := b.Clock()
-
-	var year, day, hour, min, sec int
-	var month time.Month
-	year = int(y2 - y1)
-	month = time.Month(M2 - M1)
-	day = int(d2 - d1)
-	hour = int(h2 - h1)
-	min = int(m2 - m1)
-	sec = int(s2 - s1)
-
-	// Normalize negative values
-	if sec < 0 {
-		sec += 60
-		min--
-	}
-	if min < 0 {
-		min += 60
-		hour--
-	}
-	if hour < 0 {
-		hour += 24
-		day--
-	}
-	if day < 0 {
-		// days in month:
-		t := time.Date(y1, M1, 32, 0, 0, 0, 0, time.UTC)
-		day += 32 - t.Day()
-		month--
-	}
-	if month < 0 {
-		month += 12
-		year--
-	}
-	return time.Date(year, month, day, hour, min, sec, 0, a.Location())
+//计算两个日期相差多少天
+func DiffDays(t1, t2 time.Time) int {
+	y1, m1, d1 := t1.Date()
+	y2, m2, d2 := t2.Date()
+	t1 = time.Date(y1, m1, d1, 0, 0, 0, 0, time.Local)
+	t2 = time.Date(y2, m2, d2, 0, 0, 0, 0, time.Local)
+	return int(t2.Sub(t1).Hours() / 24)
 }

@@ -1,28 +1,36 @@
-package reflectx
+package reflectx_test
 
 import (
 	"fmt"
-	"testing"
-
+	"github.com/chen56/go-common/reflectx"
 	"github.com/stretchr/testify/require"
+	"reflect"
+	"testing"
+	"time"
 )
 
-//go test -timeout 30s  -run TestInterfaceToSlice
-func TestInterfaceToSlice(t *testing.T) {
-	assert := require.New(t)
+type X struct {
+	time time.Time
+	Y    Y
+}
+type Y struct {
+	str string
+}
 
-	data := []struct {
-		strSlice []string
-		expected string
-	}{
-		{strSlice: []string{"a", "b", "c"}, expected: "[a b c]"},
-		{strSlice: []string{}, expected: "[]"},
-	}
-
-	for i, x := range data {
-		result := fmt.Sprintf("%v", InterfaceToSlice(x.strSlice))
-		assert.Equal(x.expected, result, "cut:%d", i)
-	}
-
-	fmt.Printf("xxxxx:%v \n", InterfaceToSlice([]string{"a", "b", "c"}))
+func TestIsEmpty(t *testing.T) {
+	var x X
+	require.True(t, reflectx.IsZero(x))
+	require.True(t, reflectx.IsZero(x.time))
+}
+func TestVisitFields(t *testing.T) {
+	err := reflectx.VisitFields(X{
+		time: time.Now(),
+		Y: Y{
+			str: "sss",
+		},
+	}, func(field reflect.Type) error {
+		fmt.Println("", field.String())
+		return nil
+	})
+	require.NoError(t, err)
 }
