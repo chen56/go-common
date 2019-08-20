@@ -1,10 +1,10 @@
-package errorsg_test
+package statusx_test
 
 import (
 	"context"
 	"fmt"
-	"github.com/chen56/go-common/errorsg"
 	"github.com/c2fo/testify/require"
+	"github.com/chen56/go-common/statusx"
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkg/errors"
@@ -16,14 +16,14 @@ import (
 )
 
 func Example_it_is_error() {
-	var err error = errorsg.NotFound("user不存在: %s", "chen").Err()
+	var err error = statusx.NotFound("user不存在: %s", "chen").Err()
 	fmt.Println(err)
 
 	// Output:
 	// NotFound: user不存在: chen
 }
 func Example_retryInfo() {
-	fmt.Println(toJson(errorsg.Unavailable("暂时不能服务，稍后再试").WithRetryInfo(&errdetails.RetryInfo{
+	fmt.Println(toJson(statusx.Unavailable("暂时不能服务，稍后再试").WithRetryInfo(&errdetails.RetryInfo{
 		RetryDelay: &duration.Duration{
 			Seconds: 1,
 		},
@@ -32,73 +32,73 @@ func Example_retryInfo() {
 	// {"error":"暂时不能服务，稍后再试","message":"暂时不能服务，稍后再试","code":14,"details":[{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"1s"}]}
 }
 func TestLog_panic_error(t *testing.T) {
-	_ = errorsg.Try(func() error {
+	_ = statusx.Try(func() error {
 		panic(errors.WithStack(errors.New("error")))
 	})
 }
 func TestLog_panic_string(t *testing.T) {
-	_ = errorsg.Try(func() error {
+	_ = statusx.Try(func() error {
 		panic("string Error")
 	})
 }
 func TestLog_error(t *testing.T) {
-	_ = errorsg.Try(func() error {
+	_ = statusx.Try(func() error {
 		return errors.New("error")
 	})
 }
 func TestLog_errorWithStack(t *testing.T) {
-	_ = errorsg.Try(func() error {
+	_ = statusx.Try(func() error {
 		return errors.WithStack(errors.New("error with stack"))
 	})
 }
 
 func TestLog_statusError(t *testing.T) {
-	_ = errorsg.Try(func() error {
-		return errorsg.Unauthenticated("Unauthenticated").Err()
+	_ = statusx.Try(func() error {
+		return statusx.Unauthenticated("Unauthenticated").Err()
 	})
 }
 func TestLog_statusError_maybeSystemfailure(t *testing.T) {
-	_ = errorsg.Try(func() error {
-		return errorsg.Unavailable("xxx Unavailable").Err()
+	_ = statusx.Try(func() error {
+		return statusx.Unavailable("xxx Unavailable").Err()
 	})
 }
 
 func TestRetryInfo(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	tests := []struct {
-		err      *errorsg.Error
+		err      *statusx.Error
 		duration *duration.Duration
 	}{
 		{
-			err:      errorsg.Internal("x"),
+			err:      statusx.Internal("x"),
 			duration: &duration.Duration{Seconds: 1},
 		},
 		{
-			err:      errorsg.Unavailable("x"),
+			err:      statusx.Unavailable("x"),
 			duration: &duration.Duration{Seconds: 1},
 		},
 		{
-			err:      errorsg.ResourceExhausted("x"),
+			err:      statusx.ResourceExhausted("x"),
 			duration: &duration.Duration{Seconds: 60},
 		},
 		{
-			err:      errorsg.Unknown("x"),
+			err:      statusx.Unknown("x"),
 			duration: nil,
 		},
 		{
-			err:      errorsg.Unauthenticated("x"),
+			err:      statusx.Unauthenticated("x"),
 			duration: nil,
 		},
 	}
 
 	for i, test := range tests {
-		err := errorsg.Try(func() error {
+		err := statusx.Try(func() error {
 			return test.err.Err()
 		})
 		if test.duration == nil {
-			require.Nil(t, errorsg.FromError(err).RetryInfo(), "%d - %s retry Nil", i, test.err)
+			require.Nil(t, statusx.FromError(err).RetryInfo(), "%d - %s retry Nil", i, test.err)
 		} else {
-			require.Equal(t, test.duration.Seconds, errorsg.FromError(err).RetryInfo().RetryDelay.Seconds, "%d - %s retry Equal", i, test.err)
+			require.Equal(t, test.duration.Seconds, statusx.FromError(err).RetryInfo().RetryDelay.Seconds, "%d - %s retry Equal", i, test.err)
 		}
 	}
 }
@@ -108,14 +108,14 @@ func TestTry(t *testing.T) {
 	tests := []struct {
 		msg      string
 		f        func() error
-		expected *errorsg.Error
+		expected *statusx.Error
 	}{
 		{
 			msg: "return : status",
 			f: func() error {
-				return errorsg.Internal("x").Err()
+				return statusx.Internal("x").Err()
 			},
-			expected: errorsg.Internal("x"),
+			expected: statusx.Internal("x"),
 		},
 		{
 			msg: "return : nil",
@@ -129,43 +129,43 @@ func TestTry(t *testing.T) {
 			f: func() error {
 				return errors.New("json error")
 			},
-			expected: errorsg.Unknown("catch err"),
+			expected: statusx.Unknown("catch err"),
 		},
 		{
 			msg: "recover : string",
 			f: func() error {
 				panic("json error")
 			},
-			expected: errorsg.Unknown("catch recover err"),
+			expected: statusx.Unknown("catch recover err"),
 		},
 		{
 			msg: "recover : error",
 			f: func() error {
 				panic(errors.New("json error"))
 			},
-			expected: errorsg.Unknown("catch recover err"),
+			expected: statusx.Unknown("catch recover err"),
 		},
 		{
 			msg: "recover : status",
 			f: func() error {
-				panic(errorsg.FailedPrecondition("audio invalid"))
+				panic(statusx.FailedPrecondition("audio invalid"))
 			},
-			expected: errorsg.FailedPrecondition("audio invalid"),
+			expected: statusx.FailedPrecondition("audio invalid"),
 		},
 	}
 
 	for i, test := range tests {
-		err := errorsg.Try(test.f)
+		err := statusx.Try(test.f)
 		if test.expected == nil {
 			require.Nil(t, err, "%d - %s - Nil", i, test.msg)
 		} else {
 			require.Equal(t, test.expected.Err().Error(), err.Error(), "%d - %s - Equal", i, test.msg)
-			require.Equal(t, test.expected.Code(), errorsg.FromError(err).Code(), "%d - %s - Equal", i, test.msg)
+			require.Equal(t, test.expected.Code(), statusx.FromError(err).Code(), "%d - %s - Equal", i, test.msg)
 		}
 	}
 }
 
-func toJson(err *errorsg.Error) string {
+func toJson(err *statusx.Error) string {
 	ctx := context.Background()
 
 	w := httptest.NewRecorder()

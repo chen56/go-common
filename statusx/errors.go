@@ -3,7 +3,7 @@
 //   - 错误生成的帮助方法 : return errorsg.PermissionDenied("token error")
 //   - grpc拦截器 grpc.NewUnaryServerInterceptor
 
-package errorsg
+package statusx
 
 import (
 	"fmt"

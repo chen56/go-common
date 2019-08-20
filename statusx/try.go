@@ -1,4 +1,4 @@
-package errorsg
+package statusx
 
 import (
 	"fmt"
