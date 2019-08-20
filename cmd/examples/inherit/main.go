@@ -47,11 +47,13 @@ func main() {
 	}
 
 	image.Cmd = cmd.Cmd{
-		Name: "image",
+		Name:  "image",
+		Short: "Manage images",
 	}
 
 	build.Cmd = cmd.Cmd{
-		Name: "build",
+		Name:  "build",
+		Short: "Build an image from a Dockerfile",
 		Init: func(flagSet *flag.FlagSet) error {
 			build.tag = flagSet.String("tag", "sss", "Name and optionally a tag in the 'name:tag' format")
 			build.quiet = flagSet.Bool("quiet", false, "Suppress the build output and print image ID on success")

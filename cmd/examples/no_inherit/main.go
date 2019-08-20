@@ -23,14 +23,11 @@ func main() {
 		},
 	}
 
-	image := &cmd.Cmd{
-		Name: "image",
-	}
-
 	var tag *string
 	var quiet *bool
 	build := &cmd.Cmd{
-		Name: "build",
+		Name:  "build",
+		Short: "Build an image from a Dockerfile",
 		Init: func(flagSet *flag.FlagSet) error {
 			tag = flagSet.String("tag", "sss", "Name and optionally a tag in the 'name:tag' format")
 			quiet = flagSet.Bool("quiet", false, "Suppress the build output and print image ID on success")
@@ -42,23 +39,19 @@ func main() {
 		},
 	}
 	ls := &cmd.Cmd{
-		Name: "ls",
+		Name:  "ps",
+		Short: "List containers",
 		Init: func(flagSet *flag.FlagSet) error {
 			return nil
 		},
 		Run: func(args []string) error {
-			fmt.Printf("ls")
+			fmt.Printf("ps: %v \n", args)
 			return nil
 		},
 	}
 
-	docker.Add(image)
-	image.Add(build)
-	image.Add(ls)
+	docker.Add(build)
+	docker.Add(ls)
 
-	parsed, err := cmd.Run(docker, os.Args...)
-
-	fmt.Println("=========")
-	fmt.Println(parsed.Name)
-	fmt.Println(err)
+	cmd.Run(docker, os.Args...)
 }
