@@ -3,7 +3,7 @@
 //   - 错误生成的帮助方法 : return errstatus.PermissionDenied("token error")
 //   - grpc拦截器 grpc.NewUnaryServerInterceptor
 
-package errstatus
+package statusx
 
 import (
 	"fmt"
@@ -18,21 +18,22 @@ type grpcStatus interface {
 	GRPCStatus() *status.Status
 }
 
-func FromStatus(status *status.Status) *ErrorStatus {
+func FromStatus(status *status.Status) *Status {
 	must.True(status.Code() != codes.OK)
-	return &ErrorStatus{
+	return &Status{
 		status: *status,
 	}
 }
 
-func FromError(err error) *ErrorStatus {
-	return MapIfStdError(err, func(err error) *ErrorStatus {
+func FromError(err error) *Status {
+	must.NotNil(err)
+	return MapIfStdError(err, func(err error) *Status {
 		return Unknown("Unknown error").WithDebugError(err)
 	})
 }
 
 // MapIfStdError 如果参数err是普通的error(而不是errorsg包的Error),则 用newError转换为新error
-func MapIfStdError(err error, newError func(err error) *ErrorStatus) *ErrorStatus {
+func MapIfStdError(err error, newError func(err error) *Status) *Status {
 	must.NotNil(err)
 	if e, ok := err.(*statusError); ok {
 		return e.errorStatus
@@ -43,88 +44,75 @@ func MapIfStdError(err error, newError func(err error) *ErrorStatus) *ErrorStatu
 	return newError(err)
 }
 
-func Canceled(msgAndArgs ...interface{}) *ErrorStatus {
+func Canceled(msgAndArgs ...interface{}) *Status {
 	return newError(codes.Canceled, msgAndArgs)
 }
-func Unknown(msgAndArgs ...interface{}) *ErrorStatus {
+func Unknown(msgAndArgs ...interface{}) *Status {
 	return newError(codes.Unknown, msgAndArgs)
 }
-func InvalidArgument(msgAndArgs ...interface{}) *ErrorStatus {
+func InvalidArgument(msgAndArgs ...interface{}) *Status {
 	return newError(codes.InvalidArgument, msgAndArgs)
 }
-func DeadlineExceeded(msgAndArgs ...interface{}) *ErrorStatus {
+func DeadlineExceeded(msgAndArgs ...interface{}) *Status {
 	return newError(codes.DeadlineExceeded, msgAndArgs)
 }
-func NotFound(msgAndArgs ...interface{}) *ErrorStatus {
+func NotFound(msgAndArgs ...interface{}) *Status {
 	return newError(codes.NotFound, msgAndArgs)
 }
-func AlreadyExists(msgAndArgs ...interface{}) *ErrorStatus {
+func AlreadyExists(msgAndArgs ...interface{}) *Status {
 	return newError(codes.AlreadyExists, msgAndArgs)
 }
-func PermissionDenied(msgAndArgs ...interface{}) *ErrorStatus {
+func PermissionDenied(msgAndArgs ...interface{}) *Status {
 	return newError(codes.PermissionDenied, msgAndArgs)
 }
-func ResourceExhausted(msgAndArgs ...interface{}) *ErrorStatus {
+func ResourceExhausted(msgAndArgs ...interface{}) *Status {
 	return newError(codes.ResourceExhausted, msgAndArgs)
 }
-func FailedPrecondition(msgAndArgs ...interface{}) *ErrorStatus {
+func FailedPrecondition(msgAndArgs ...interface{}) *Status {
 	return newError(codes.FailedPrecondition, msgAndArgs)
 }
-func Aborted(msgAndArgs ...interface{}) *ErrorStatus {
+func Aborted(msgAndArgs ...interface{}) *Status {
 	return newError(codes.Aborted, msgAndArgs)
 }
-func OutOfRange(msgAndArgs ...interface{}) *ErrorStatus {
+func OutOfRange(msgAndArgs ...interface{}) *Status {
 	return newError(codes.OutOfRange, msgAndArgs)
 }
-func Unimplemented(msgAndArgs ...interface{}) *ErrorStatus {
+func Unimplemented(msgAndArgs ...interface{}) *Status {
 	return newError(codes.Unimplemented, msgAndArgs)
 }
-func Internal(msgAndArgs ...interface{}) *ErrorStatus {
+func Internal(msgAndArgs ...interface{}) *Status {
 	return newError(codes.Internal, msgAndArgs)
 }
-func Unavailable(msgAndArgs ...interface{}) *ErrorStatus {
+func Unavailable(msgAndArgs ...interface{}) *Status {
 	return newError(codes.Unavailable, msgAndArgs)
 }
-func DataLoss(msgAndArgs ...interface{}) *ErrorStatus {
+func DataLoss(msgAndArgs ...interface{}) *Status {
 	return newError(codes.DataLoss, msgAndArgs)
 }
-func Unauthenticated(msgAndArgs ...interface{}) *ErrorStatus {
+func Unauthenticated(msgAndArgs ...interface{}) *Status {
 	return newError(codes.Unauthenticated, msgAndArgs)
 }
 
-type ErrorStatus struct {
+type Status struct {
 	status status.Status
 }
 
-type statusError struct {
-	errorStatus *ErrorStatus
-}
-
-// impl error interface
-func (x *statusError) Error() string {
-	return fmt.Sprintf("%s: %s", x.errorStatus.Code(), x.errorStatus.Message())
-}
-
-func (x *statusError) GRPCStatus() *status.Status {
-	return &x.errorStatus.status
-}
-
 // to error interface
-func (x *ErrorStatus) Err() error {
+func (x *Status) Err() error {
 	return &statusError{errorStatus: x}
 }
 
-func (x *ErrorStatus) Code() codes.Code {
+func (x *Status) Code() codes.Code {
 	return x.status.Code()
 }
-func (x *ErrorStatus) Message() string {
+func (x *Status) Message() string {
 	return x.status.Message()
 }
-func (x *ErrorStatus) GRPCStatus() *status.Status {
+func (x *Status) GRPCStatus() *status.Status {
 	return &x.status
 }
 
-func (x *ErrorStatus) RetryInfo() *errdetails.RetryInfo {
+func (x *Status) RetryInfo() *errdetails.RetryInfo {
 	for _, d := range x.GRPCStatus().Details() {
 		if retry, ok := d.(*errdetails.RetryInfo); ok {
 			return retry
@@ -133,7 +121,7 @@ func (x *ErrorStatus) RetryInfo() *errdetails.RetryInfo {
 	return nil
 }
 
-func (x *ErrorStatus) WithDebugMessage(debugMsgAndArgs ...interface{}) *ErrorStatus {
+func (x *Status) WithDebugMessage(debugMsgAndArgs ...interface{}) *Status {
 	newStatus, err := x.status.WithDetails(&errdetails.DebugInfo{
 		Detail: format("[debug]", debugMsgAndArgs),
 	})
@@ -141,19 +129,19 @@ func (x *ErrorStatus) WithDebugMessage(debugMsgAndArgs ...interface{}) *ErrorSta
 	return FromStatus(newStatus)
 }
 
-func (x *ErrorStatus) WithDetails(details ...proto.Message) *ErrorStatus {
+func (x *Status) WithDetails(details ...proto.Message) *Status {
 	newStatus, err := x.status.WithDetails(details...)
 	must.NoError(err)
 	return FromStatus(newStatus)
 }
 
-func (x *ErrorStatus) WithRetryInfo(retryInfo *errdetails.RetryInfo) *ErrorStatus {
+func (x *Status) WithRetryInfo(retryInfo *errdetails.RetryInfo) *Status {
 	newStatus, err := x.status.WithDetails(retryInfo)
 	must.NoError(err)
 	return FromStatus(newStatus)
 }
 
-func (x *ErrorStatus) WithDebugError(err error) *ErrorStatus {
+func (x *Status) WithDebugError(err error) *Status {
 	must.NotNil(err)
 	newStatus, err := x.status.WithDetails(&errdetails.DebugInfo{
 		Detail: err.Error(),
@@ -162,8 +150,8 @@ func (x *ErrorStatus) WithDebugError(err error) *ErrorStatus {
 	return FromStatus(newStatus)
 }
 
-func newError(code codes.Code, msgAndArgs []interface{}) *ErrorStatus {
-	return &ErrorStatus{
+func newError(code codes.Code, msgAndArgs []interface{}) *Status {
+	return &Status{
 		status: *status.New(code, format(code.String(), msgAndArgs)),
 	}
 }

@@ -1,4 +1,4 @@
-package errstatus
+package statusx
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func (x *ErrorStatus) setRetryIfNeed() *ErrorStatus {
+func (x *Status) setRetryIfNeed() *Status {
 	for _, d := range x.GRPCStatus().Details() {
 		// 如果已经设置retryInfo，就不设了
 		if _, ok := d.(*errdetails.RetryInfo); ok {
