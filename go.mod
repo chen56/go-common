@@ -13,6 +13,7 @@ require (
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/fluent/fluent-logger-golang v1.4.0
 	github.com/fortytw2/leaktest v1.3.0 // indirect
+	github.com/frankban/quicktest v1.4.1 // indirect
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gogo/protobuf v1.2.1 // indirect
@@ -45,10 +46,11 @@ require (
 	golang.org/x/mobile v0.0.0-20190814143026-e8b3e6111d02 // indirect
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a // indirect
-	golang.org/x/tools v0.0.0-20190819174341-15fda70baffd // indirect
+	golang.org/x/tools v0.0.0-20190820033707-85edb9ef3283 // indirect
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 	google.golang.org/grpc v1.23.0
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
+	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
 	gopkg.in/ldap.v3 v3.0.3
 	gopkg.in/olivere/elastic.v5 v5.0.81
