@@ -1,6 +1,6 @@
 #
 # Makefile
-#
+# test
 
 .PHONY: test
 test:
